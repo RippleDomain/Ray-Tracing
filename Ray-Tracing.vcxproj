@@ -93,13 +93,13 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)external\glfw\include;$(SolutionDir)external\vulkan\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)external\glfw\include;$(SolutionDir)external\vulkan\Include;$(SolutionDir)external\imgui\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)external\glfw\lib-vc2022;$(SolutionDir)external\vulkan\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)external\glfw\lib-vc2022;$(SolutionDir)external\vulkan\Lib;$(SolutionDir)external\imgui\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>shaderc_combined.lib;glfw3.lib;vulkan-1.lib;imgui.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -111,13 +111,13 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)external\glfw\include;$(SolutionDir)external\vulkan\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)external\glfw\include;$(SolutionDir)external\vulkan\Include;$(SolutionDir)external\imgui\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)external\glfw\lib-vc2022;$(SolutionDir)external\vulkan\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;glfw3.lib;vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)external\glfw\lib-vc2022;$(SolutionDir)external\vulkan\Lib;$(SolutionDir)external\imgui\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>shaderc_combined.lib;glfw3.lib;vulkan-1.lib;imgui.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -127,13 +127,13 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)external\glfw\include;$(SolutionDir)external\vulkan\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)external\glfw\include;$(SolutionDir)external\vulkan\Include;$(SolutionDir)external\imgui\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)external\glfw\lib-vc2022;$(SolutionDir)external\vulkan\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)external\glfw\lib-vc2022;$(SolutionDir)external\vulkan\Lib;$(SolutionDir)external\imgui\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>shaderc_combined.lib;glfw3.lib;vulkan-1.lib;imgui.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -145,29 +145,48 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)external\glfw\include;$(SolutionDir)external\vulkan\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)external\glfw\include;$(SolutionDir)external\vulkan\Include;$(SolutionDir)external\imgui\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)external\glfw\lib-vc2022;$(SolutionDir)external\vulkan\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;glfw3.lib;vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)external\glfw\lib-vc2022;$(SolutionDir)external\vulkan\Lib;$(SolutionDir)external\imgui\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>shaderc_combined.lib;glfw3.lib;vulkan-1.lib;imgui.lib;glfw3.lib;vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="apps\RayTracerApp\main.cpp" />
-    <ClCompile Include="engine\core\Logger.cpp" />
-    <ClCompile Include="engine\platform\Window.cpp" />
-    <ClCompile Include="engine\vk\Swapchain.cpp" />
-    <ClCompile Include="engine\vk\VulkanContext.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\core\App.cpp" />
+    <ClCompile Include="src\platform\Window.cpp" />
+    <ClCompile Include="src\util\Logger.cpp" />
+    <ClCompile Include="src\vk\VulkanContext.cpp" />
+    <ClCompile Include="src\vk\Swapchain.cpp" />
+    <ClCompile Include="src\rt\RayTracer.cpp" />
+    <ClCompile Include="external\imgui\include\imgui.cpp" />
+    <ClCompile Include="external\imgui\include\imgui_demo.cpp" />
+    <ClCompile Include="external\imgui\include\imgui_draw.cpp" />
+    <ClCompile Include="external\imgui\include\imgui_impl_glfw.cpp" />
+    <ClCompile Include="external\imgui\include\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="external\imgui\include\imgui_tables.cpp" />
+    <ClCompile Include="external\imgui\include\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="engine\core\Check.h" />
-    <ClInclude Include="engine\core\Logger.h" />
-    <ClInclude Include="engine\core\Timer.h" />
-    <ClInclude Include="engine\platform\Window.h" />
-    <ClInclude Include="engine\vk\Swapchain.h" />
-    <ClInclude Include="engine\vk\VulkanContext.h" />
+    <ClInclude Include="src\core\App.h" />
+    <ClInclude Include="src\platform\Window.h" />
+    <ClInclude Include="src\vk\Swapchain.h" />
+    <ClInclude Include="src\vk\VulkanContext.h" />
+    <ClInclude Include="src\rt\RayTracer.h" />
+    <ClInclude Include="src\util\Check.h" />
+    <ClInclude Include="src\util\Logger.h" />
+    <ClInclude Include="src\util\Timer.h" />
+    <ClInclude Include="external\imgui\include\imconfig.h" />
+    <ClInclude Include="external\imgui\include\imgui.h" />
+    <ClInclude Include="external\imgui\include\imgui_impl_glfw.h" />
+    <ClInclude Include="external\imgui\include\imgui_impl_vulkan.h" />
+    <ClInclude Include="external\imgui\include\imgui_internal.h" />
+    <ClInclude Include="external\imgui\include\imstb_rectpack.h" />
+    <ClInclude Include="external\imgui\include\imstb_textedit.h" />
+    <ClInclude Include="external\imgui\include\imstb_truetype.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
