@@ -210,11 +210,11 @@ void Swapchain::createRenderPass(VulkanContext& vulkanContext)
     VkAttachmentDescription color{};
     color.format = mSwapchainBundle.imageFormat;
     color.samples = VK_SAMPLE_COUNT_1_BIT;
-    color.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD; //Load compute output.
+    color.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD; // Load compute output.
     color.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     color.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     color.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    color.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; //Compute transition provides this.
+    color.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // Compute transition provides this.
     color.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
     VkAttachmentReference colorRef{};

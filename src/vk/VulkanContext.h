@@ -35,7 +35,7 @@ public:
     VulkanContext() = default;
     ~VulkanContext();
 
-    //Lifecycle.
+    // Lifecycle.
     void createInstance(bool enableValidation);
     void setupDebugMessenger(bool enableValidation);
     void createSurface(Window& window);
@@ -47,10 +47,10 @@ public:
 
     void destroy();
 
-    //Helpers.
+    // Helpers.
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) const;
 
-    //Getters.
+    // Getters.
     VkInstance instance() const
     {
         return mInstance;
@@ -101,14 +101,14 @@ public:
         return mPresentFamilyIndex;
     }
 
-    //Resize.
+    // Resize.
     void waitIdle() const;
 
 private:
-    //Debug utils.
+    // Debug utils.
     VkDebugUtilsMessengerEXT mDebugMessenger = VK_NULL_HANDLE;
 
-    //Core handles.
+    // Core handles.
     VkInstance mInstance = VK_NULL_HANDLE;
     VkSurfaceKHR mSurface = VK_NULL_HANDLE;
     VkPhysicalDevice mPhysical = VK_NULL_HANDLE;
@@ -118,20 +118,20 @@ private:
     uint32_t mGraphicsFamilyIndex = 0;
     uint32_t mPresentFamilyIndex = 0;
 
-    //VMA.
+    // VMA.
     VmaAllocator mAllocator = VK_NULL_HANDLE;
 
-    //Per-frame.
+    // Per-frame.
     std::vector<FrameSync> mFrames;
 
-    //Validation.
+    // Validation.
     bool mEnableValidation = false;
 
-    //Internal helpers.
+    // Internal helpers.
     bool checkDeviceExtensions(VkPhysicalDevice device) const;
     void getRequiredInstanceExtensions(std::vector<const char*>& out) const;
 
-    //Loading extension functions.
+    // Loading extension functions.
     static VkResult CreateDebugUtilsMessengerEXT(VkInstance inst,
         const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
         const VkAllocationCallbacks* pAllocator,

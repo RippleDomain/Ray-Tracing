@@ -100,7 +100,7 @@ int App::run()
 {
     try
     {
-        //Window.
+        // Window.
         Window window;
 
         if (!window.create(windowWidth, windowHeight, "Vulkan Ray Tracer"))
@@ -108,7 +108,7 @@ int App::run()
             return EXIT_FAILURE;
         }
 
-        //Vulkan core.
+        // Vulkan core.
         VulkanContext vulkanContext;
         vulkanContext.createInstance(true);
         vulkanContext.setupDebugMessenger(true);
@@ -119,15 +119,15 @@ int App::run()
         vulkanContext.createCommandPoolsAndBuffers(maxFramesInFlight);
         vulkanContext.createSyncObjects(maxFramesInFlight);
 
-        //Swapchain.
+        // Swapchain.
         Swapchain swapchain;
         swapchain.create(vulkanContext, window);
 
-        //ImGui.
+        // ImGui.
         VkDescriptorPool imguiPool = createImguiPool(vulkanContext.device());
         imguiInit(window, vulkanContext, swapchain, imguiPool);
 
-        //Ray tracer.
+        // Ray tracer.
         RayTracer tracer;
         tracer.create(vulkanContext, swapchain);
         tracer.setSamplesPerPixel(4);
@@ -140,7 +140,7 @@ int App::run()
         int fpsFrames = 0;
         Timer frameTimer;
 
-        //Camera state.
+        // Camera state.
         glm::vec3 camPos{ 13.0f, 2.0f, 3.0f };
         glm::vec3 camDir = glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f) - camPos);
         float yaw = glm::degrees(std::atan2(camDir.z, camDir.x));
@@ -153,7 +153,7 @@ int App::run()
         bool cameraPaused = false;
         bool escPrev = false;
 
-        //UI state.
+        // UI state.
         int uiSpp = 4;
         float uiAperture = 0.05f;
         float uiFocusDist = glm::length(glm::vec3(0.0f, 1.0f, 0.0f) - camPos);
@@ -167,7 +167,7 @@ int App::run()
             frameTimer.reset();
             bool camChanged = false;
 
-            //Toggle pause with ESC.
+            // Toggle pause with ESC.
             bool escPressed = window.keyState(GLFW_KEY_ESCAPE) == GLFW_PRESS;
 
             if (escPressed && !escPrev)
@@ -190,7 +190,7 @@ int App::run()
 
             escPrev = escPressed;
 
-            //Handle resize (recreate swapchain on demand).
+            // Handle resize (recreate swapchain on demand).
             if (window.framebufferResized())
             {
                 window.clearFramebufferResized();
@@ -209,7 +209,7 @@ int App::run()
             bool uiWantsMouse = imguiIo.WantCaptureMouse;
             bool uiWantsKeyboard = imguiIo.WantCaptureKeyboard;
 
-            //Cursor capture toggle based on UI focus or pause.
+            // Cursor capture toggle based on UI focus or pause.
             if ((uiWantsMouse || cameraPaused) && cursorCaptured)
             {
                 window.setCursorMode(GLFW_CURSOR_NORMAL);
@@ -222,7 +222,7 @@ int App::run()
                 firstMouse = true;
             }
 
-            //Mouse look.
+            // Mouse look.
             if (cursorCaptured && !cameraPaused)
             {
                 double cursorX = 0.0;
@@ -262,7 +262,7 @@ int App::run()
                 }
             }
 
-            //Keyboard move.
+            // Keyboard move.
             if (!uiWantsKeyboard && !cameraPaused)
             {
                 glm::vec3 right = glm::normalize(glm::cross(camDir, glm::vec3(0.0f, 1.0f, 0.0f)));
@@ -309,7 +309,7 @@ int App::run()
 
             auto& frameSync = vulkanContext.frames()[currentFrame];
 
-            //Wait for GPU.
+            // Wait for GPU.
             VK_CHECK(vkWaitForFences(vulkanContext.device(), 1, &frameSync.inFlight, VK_TRUE, UINT64_MAX));
             VK_CHECK(vkResetFences(vulkanContext.device(), 1, &frameSync.inFlight));
 
@@ -333,7 +333,7 @@ int App::run()
 
             tracer.render(vulkanContext, swapchain, frameSync.cmdBuf, imageIndex, sampleFrame);
 
-            //Overlay.
+            // Overlay.
             ImGuiWindowFlags overlayFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
                 ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
             ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
@@ -348,7 +348,7 @@ int App::run()
 
             ImGui::End();
 
-            //Settings.
+            // Settings.
             ImGui::SetNextWindowSize(ImVec2(320, 0), ImGuiCond_FirstUseEver);
             ImGui::Begin("Ray Tracer");
 
@@ -397,7 +397,7 @@ int App::run()
 
             VK_CHECK(vkEndCommandBuffer(frameSync.cmdBuf));
 
-            //Submit.
+            // Submit.
             VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
             VkSubmitInfo submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
             submitInfo.waitSemaphoreCount = 1;
@@ -410,7 +410,7 @@ int App::run()
 
             VK_CHECK(vkQueueSubmit(vulkanContext.graphicsQueue(), 1, &submitInfo, frameSync.inFlight));
 
-            //Present.
+            // Present.
             VkResult presentResult = swapchain.present(vulkanContext, frameSync.renderFinished, imageIndex);
 
             if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR)
@@ -424,7 +424,7 @@ int App::run()
                 VK_CHECK(presentResult);
             }
 
-            //FPS.
+            // FPS.
             fpsTimeAcc += fpsTimer.elapsedSeconds();
             ++fpsFrames;
 

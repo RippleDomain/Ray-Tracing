@@ -8,26 +8,26 @@
 class VulkanContext;
 class Swapchain;
 
-//GPU sphere layout.
+// GPU sphere layout.
 struct GPUSphere
 {
-    glm::vec4 centerRadius; //xyz = center, w = radius.
-    glm::vec4 albedo; //xyz = albedo, w unused.
-    glm::vec4 misc; //x = material (0=lambert,1=metal,2=dielectric), y = fuzz, z = refIdx, w = flags (bit0=checker).
+    glm::vec4 centerRadius; // xyz = center, w = radius.
+    glm::vec4 albedo; // xyz = albedo, w unused.
+    glm::vec4 misc; // x = material (0=lambert,1=metal,2=dielectric), y = fuzz, z = refIdx, w = flags (bit0=checker).
 };
 
-//Uniform parameters.
+// Uniform parameters.
 struct GPUParams
 {
-    glm::vec4 originLens; //xyz origin, w lensRadius.
-    glm::vec4 lowerLeft; //xyz lower-left corner, w unused.
-    glm::vec4 horizontal; //xyz horizontal, w unused.
-    glm::vec4 vertical; //xyz vertical, w unused.
-    glm::vec4 u; //camera basis.
+    glm::vec4 originLens; // xyz origin, w lensRadius.
+    glm::vec4 lowerLeft; // xyz lower-left corner, w unused.
+    glm::vec4 horizontal; // xyz horizontal, w unused.
+    glm::vec4 vertical; // xyz vertical, w unused.
+    glm::vec4 u; // camera basis.
     glm::vec4 v;
     glm::vec4 w;
-    glm::uvec4 frameSampleDepthCount; //frameIndex, samplesPerFrame, maxDepth, sphereCount.
-    glm::vec4 resolution; //x=width, y=height.
+    glm::uvec4 frameSampleDepthCount; // frameIndex, samplesPerFrame, maxDepth, sphereCount.
+    glm::vec4 resolution; // x=width, y=height.
 };
 
 class RayTracer
@@ -46,7 +46,7 @@ public:
     void setFov(float vfov);
     void setMaxDepth(uint32_t depth);
 
-    //Records commands into an already begun command buffer.
+    // Records commands into an already begun command buffer.
     void render(VulkanContext& vulkanContext, Swapchain& swapchain, VkCommandBuffer commandBuffer, uint32_t swapImageIndex, uint32_t frameIndex);
 
 private:

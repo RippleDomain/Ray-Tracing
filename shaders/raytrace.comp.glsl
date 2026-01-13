@@ -1,14 +1,14 @@
 #version 460
 
-//Simple compute path tracer with lambert/metal/dielectric materials, depth-of-field camera, multi-frame accumulation.
+// Simple compute path tracer with lambert/metal/dielectric materials, depth-of-field camera, multi-frame accumulation.
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 struct Sphere
 {
-    vec4 centerRadius; //xyz center, w radius
-    vec4 albedo; //xyz albedo
-    vec4 misc; //x material (0 lambert, 1 metal, 2 dielectric), y fuzz, z refIdx
+    vec4 centerRadius; // xyz center, w radius
+    vec4 albedo; // xyz albedo
+    vec4 misc; // x material (0 lambert, 1 metal, 2 dielectric), y fuzz, z refIdx
 };
 
 layout(std430, binding = 2) buffer Spheres
@@ -18,21 +18,21 @@ layout(std430, binding = 2) buffer Spheres
 
 layout(std140, binding = 3) uniform Params
 {
-    vec4 originLens; //xyz origin, w lens radius
-    vec4 lowerLeft; //xyz lower-left
-    vec4 horizontal; //xyz horizontal
-    vec4 vertical; //xyz vertical
-    vec4 u; //camera basis
+    vec4 originLens; // xyz origin, w lens radius
+    vec4 lowerLeft; // xyz lower-left
+    vec4 horizontal; // xyz horizontal
+    vec4 vertical; // xyz vertical
+    vec4 u; // camera basis
     vec4 v;
     vec4 w;
-    uvec4 frameSampleDepthCount; //x = frame, y=samples per frame, z=max depth, w=sphere count
-    vec4 resolution; //x = width, y = height
+    uvec4 frameSampleDepthCount; // x = frame, y=samples per frame, z=max depth, w=sphere count
+    vec4 resolution; // x = width, y = height
 } params;
 
 layout(binding = 0, rgba32f) uniform image2D accumImage;
 layout(binding = 1, rgba8) uniform writeonly image2D outputImage;
 
-//----------RNG----------
+// ----------RNG----------
 uint hash(uvec3 value)
 {
     value = (value ^ (value >> 17u)) * 0xED5AD4BBu;
@@ -84,7 +84,7 @@ vec3 randomInUnitDisk(inout uint state)
     return point;
 }
 
-//----------Math Helpers----------
+// ----------Math Helpers----------
 struct Ray
 {
     vec3 o;
@@ -315,7 +315,7 @@ void main()
     {
         float uCoord = (float(pixel.x) + rand(rng)) / params.resolution.x;
 
-        //Flip Y so image is upright (swapchain origin top-left, camera expects bottom-left).
+        // Flip Y so image is upright (swapchain origin top-left, camera expects bottom-left).
         float vCoord = (float(params.resolution.y - 1u - pixel.y) + rand(rng)) / params.resolution.y;
 
         vec3 randomDisk = params.originLens.w * randomInUnitDisk(rng);
@@ -335,7 +335,7 @@ void main()
 
     float sampleCount = float((frame + 1u) * params.frameSampleDepthCount.y);
     vec3 color = total / sampleCount;
-    color = color / (color + vec3(1.0)); //simple tonemap
+    color = color / (color + vec3(1.0)); // simple tonemap
     color = pow(max(color, vec3(0.0)), vec3(1.0 / 2.2));
 
     imageStore(outputImage, pixel, vec4(color, 1.0));

@@ -17,7 +17,7 @@
 
 namespace
 {
-    //Reads an entire text file into a std::string.
+    // Reads an entire text file into a std::string.
     std::string readFileText(const std::string& path)
     {
         std::ifstream inputStream(path, std::ios::binary);
@@ -65,31 +65,31 @@ void RayTracer::buildScene()
     GPUSphere ground{};
     ground.centerRadius = { 0.0f, -1000.0f, 0.0f, 1000.0f };
     ground.albedo = { 0.75f, 0.8f, 0.9f, 0.0f };
-    ground.misc = { 0.0f, 0.0f, 1.0f, 1.0f }; //Lambert with checker flag.
+    ground.misc = { 0.0f, 0.0f, 1.0f, 1.0f }; // Lambert with checker flag.
     mSpheres.push_back(ground);
 
     GPUSphere center{};
     center.centerRadius = { 0.0f, 1.0f, 0.0f, 1.0f };
-    center.albedo = { 0.9f, 0.25f, 0.25f, 0.0f }; //Vibrant red.
-    center.misc = { 0.0f, 0.0f, 1.0f, 0.0f }; //Lambert.
+    center.albedo = { 0.9f, 0.25f, 0.25f, 0.0f }; // Vibrant red.
+    center.misc = { 0.0f, 0.0f, 1.0f, 0.0f }; // Lambert.
     mSpheres.push_back(center);
 
     GPUSphere left{};
     left.centerRadius = { -4.0f, 1.0f, 0.0f, 1.0f };
-    left.albedo = { 1.0f, 1.0f, 1.0f, 0.0f }; //Glass stays neutral.
-    left.misc = { 2.0f, 0.0f, 1.5f, 0.0f }; //Dielectric, refIdx 1.5.
+    left.albedo = { 1.0f, 1.0f, 1.0f, 0.0f }; // Glass stays neutral.
+    left.misc = { 2.0f, 0.0f, 1.5f, 0.0f }; // Dielectric, refIdx 1.5.
     mSpheres.push_back(left);
 
     GPUSphere right{};
     right.centerRadius = { 4.0f, 1.0f, 0.0f, 1.0f };
-    right.albedo = { 0.95f, 0.65f, 0.15f, 0.0f }; //Warmer metal.
-    right.misc = { 1.0f, 0.03f, 1.0f, 0.0f }; //Metal with small fuzz.
+    right.albedo = { 0.95f, 0.65f, 0.15f, 0.0f }; // Warmer metal.
+    right.misc = { 1.0f, 0.03f, 1.0f, 0.0f }; // Metal with small fuzz.
     mSpheres.push_back(right);
 
     GPUSphere mirror{};
     mirror.centerRadius = { 2.5f, 0.5f, 2.5f, 0.5f };
-    mirror.albedo = { 0.95f, 0.95f, 0.98f, 0.0f }; //Bright reflective.
-    mirror.misc = { 1.0f, 0.0f, 1.0f, 0.0f }; //Perfect mirror (fuzz=0).
+    mirror.albedo = { 0.95f, 0.95f, 0.98f, 0.0f }; // Bright reflective.
+    mirror.misc = { 1.0f, 0.0f, 1.0f, 0.0f }; // Perfect mirror (fuzz=0).
     mSpheres.push_back(mirror);
 }
 
@@ -495,7 +495,7 @@ void RayTracer::render(VulkanContext& vulkanContext, Swapchain& swapchain, VkCom
     VkExtent2D extent = swapchain.bundle().extent;
     updateParams(vulkanContext, extent, frameIndex);
 
-    //Image barriers: accumulation to GENERAL, swapchain to GENERAL.
+    // Image barriers: accumulation to GENERAL, swapchain to GENERAL.
     std::array<VkImageMemoryBarrier, 2> barriers{};
 
     barriers[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -532,7 +532,7 @@ void RayTracer::render(VulkanContext& vulkanContext, Swapchain& swapchain, VkCom
         static_cast<uint32_t>(barriers.size()),
         barriers.data());
 
-    //Clear accumulation on reset.
+    // Clear accumulation on reset.
     if (mResetAccum || frameIndex == 0)
     {
         VkClearColorValue zero{};
@@ -551,7 +551,7 @@ void RayTracer::render(VulkanContext& vulkanContext, Swapchain& swapchain, VkCom
     uint32_t groupY = (extent.height + 7) / 8;
     vkCmdDispatch(commandBuffer, groupX, groupY, 1);
 
-    //Barrier to make image ready for color attachment (ImGui render pass will load).
+    // Barrier to make image ready for color attachment (ImGui render pass will load).
     VkImageMemoryBarrier presentBarrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
     presentBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
     presentBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
