@@ -21,8 +21,8 @@
 #include "../vk/Swapchain.h"
 #include "../rt/RayTracer.h"
 
-static const uint32_t windowWidth = 1280;
-static const uint32_t windowHeight = 720;
+static const uint32_t windowWidth = 1920;
+static const uint32_t windowHeight = 1080;
 static const uint32_t maxFramesInFlight = 2;
 static const uint32_t imguiMinImageCount = 2;
 
@@ -96,6 +96,27 @@ static void imguiShutdown(VkDevice device, VkDescriptorPool pool)
     vkDestroyDescriptorPool(device, pool, nullptr);
 }
 
+static void recreateImageSemaphores(VkDevice device, uint32_t imageCount, std::vector<VkSemaphore>& renderFinished, std::vector<VkFence>& imagesInFlight)
+{
+    for (auto semaphore : renderFinished)
+    {
+        if (semaphore != VK_NULL_HANDLE)
+        {
+            vkDestroySemaphore(device, semaphore, nullptr);
+        }
+    }
+
+    renderFinished.assign(imageCount, VK_NULL_HANDLE);
+    imagesInFlight.assign(imageCount, VK_NULL_HANDLE);
+
+    VkSemaphoreCreateInfo semaphoreInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+
+    for (uint32_t i = 0; i < imageCount; ++i)
+    {
+        VK_CHECK(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinished[i]));
+    }
+}
+
 int App::run()
 {
     try
@@ -133,6 +154,11 @@ int App::run()
         tracer.setSamplesPerPixel(4);
         tracer.setAperture(0.05f);
 
+        // Per-swapchain-image sync (to avoid reusing present semaphores still in use).
+        std::vector<VkSemaphore> imageRenderFinished;
+        std::vector<VkFence> imagesInFlight;
+        recreateImageSemaphores(vulkanContext.device(), static_cast<uint32_t>(swapchain.bundle().images.size()), imageRenderFinished, imagesInFlight);
+
         uint32_t currentFrame = 0;
         uint32_t sampleFrame = 0;
         Timer fpsTimer;
@@ -166,6 +192,30 @@ int App::run()
             double deltaTime = frameTimer.elapsedSeconds();
             frameTimer.reset();
             bool camChanged = false;
+
+            // Handle framebuffer resize/fullscreen changes.
+            if (window.framebufferResized())
+            {
+                int fbW = 0;
+                int fbH = 0;
+                window.getFramebufferSize(fbW, fbH);
+
+                // If minimized (0,0), block until a valid size is available.
+                while (fbW == 0 || fbH == 0)
+                {
+                    window.waitEvents();
+                    window.getFramebufferSize(fbW, fbH);
+                }
+
+                swapchain.recreate(vulkanContext, window);
+                tracer.resize(vulkanContext, swapchain);
+                recreateImageSemaphores(vulkanContext.device(), static_cast<uint32_t>(swapchain.bundle().images.size()), imageRenderFinished, imagesInFlight);
+                sampleFrame = 0;
+                window.clearFramebufferResized();
+
+                // Skip the rest of this loop iteration to avoid using stale objects.
+                continue;
+            }
 
             // Toggle pause with ESC.
             bool escPressed = window.keyState(GLFW_KEY_ESCAPE) == GLFW_PRESS;
@@ -320,12 +370,21 @@ int App::run()
             {
                 swapchain.recreate(vulkanContext, window);
                 tracer.resize(vulkanContext, swapchain);
+                recreateImageSemaphores(vulkanContext.device(), static_cast<uint32_t>(swapchain.bundle().images.size()), imageRenderFinished, imagesInFlight);
                 sampleFrame = 0;
 
                 continue;
             }
 
             VK_CHECK(acquireResult);
+
+            // If this swapchain image is already in flight, wait for the fence that owns it.
+            if (imagesInFlight[imageIndex] != VK_NULL_HANDLE)
+            {
+                VK_CHECK(vkWaitForFences(vulkanContext.device(), 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX));
+            }
+
+            imagesInFlight[imageIndex] = frameSync.inFlight;
 
             VK_CHECK(vkResetCommandBuffer(frameSync.cmdBuf, 0));
             VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
@@ -406,17 +465,18 @@ int App::run()
             submitInfo.commandBufferCount = 1;
             submitInfo.pCommandBuffers = &frameSync.cmdBuf;
             submitInfo.signalSemaphoreCount = 1;
-            submitInfo.pSignalSemaphores = &frameSync.renderFinished;
+            submitInfo.pSignalSemaphores = &imageRenderFinished[imageIndex];
 
             VK_CHECK(vkQueueSubmit(vulkanContext.graphicsQueue(), 1, &submitInfo, frameSync.inFlight));
 
             // Present.
-            VkResult presentResult = swapchain.present(vulkanContext, frameSync.renderFinished, imageIndex);
+            VkResult presentResult = swapchain.present(vulkanContext, imageRenderFinished[imageIndex], imageIndex);
 
             if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR)
             {
                 swapchain.recreate(vulkanContext, window);
                 tracer.resize(vulkanContext, swapchain);
+                recreateImageSemaphores(vulkanContext.device(), static_cast<uint32_t>(swapchain.bundle().images.size()), imageRenderFinished, imagesInFlight);
                 sampleFrame = 0;
             }
             else
@@ -443,6 +503,7 @@ int App::run()
 
         vulkanContext.waitIdle();
         imguiShutdown(vulkanContext.device(), imguiPool);
+        recreateImageSemaphores(vulkanContext.device(), 0, imageRenderFinished, imagesInFlight);
         tracer.destroy(vulkanContext);
         swapchain.destroy(vulkanContext);
         vulkanContext.destroy();
