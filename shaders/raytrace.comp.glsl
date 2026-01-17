@@ -25,7 +25,7 @@ layout(std140, binding = 3) uniform Params
     vec4 u; // camera basis
     vec4 v;
     vec4 w;
-    uvec4 frameSampleDepthCount; // x = frame, y=samples per frame, z=max depth, w=sphere count
+    uvec4 frameSampleDepthCount; // x = frame, y = samples per frame, z = max depth, w = sphere count
     vec4 resolution; // x = width, y = height
 } params;
 
