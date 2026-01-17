@@ -3,6 +3,8 @@
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
 #include "vma/vk_mem_alloc.h"
 
+#define VRAYT_DEBUG 0
+
 #include "VulkanContext.h"
 #include "../util/Check.h"
 #include "../util/Logger.h"
@@ -58,7 +60,7 @@ void VulkanContext::createInstance(bool enableValidation)
     std::vector<const char*> extensions;
     getRequiredInstanceExtensions(extensions);
 
-#ifdef VRAYT_DEBUG
+#if VRAYT_DEBUG
     if (enableValidation)
     {
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -66,7 +68,7 @@ void VulkanContext::createInstance(bool enableValidation)
 #endif
 
     std::vector<const char*> layers;
-#ifdef VRAYT_DEBUG
+#if VRAYT_DEBUG
     if (enableValidation)
     {
         layers.push_back("VK_LAYER_KHRONOS_validation");
@@ -86,7 +88,7 @@ void VulkanContext::createInstance(bool enableValidation)
 
 void VulkanContext::setupDebugMessenger(bool enableValidation)
 {
-#ifndef VRAYT_DEBUG
+#if !VRAYT_DEBUG
     (void)enableValidation;
 #else
     if (!enableValidation)
@@ -242,26 +244,22 @@ void VulkanContext::pickPhysicalDevice()
 
 void VulkanContext::createDevice()
 {
-    VkPhysicalDeviceAccelerationStructureFeaturesKHR accelerationFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
-    accelerationFeatures.accelerationStructure = VK_TRUE;
-
-    VkPhysicalDeviceRayTracingPipelineFeaturesKHR rayTracingFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
-    rayTracingFeatures.rayTracingPipeline = VK_TRUE;
-    rayTracingFeatures.pNext = &accelerationFeatures;
-
-    VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES };
-    bufferDeviceAddressFeatures.bufferDeviceAddress = VK_TRUE;
-    bufferDeviceAddressFeatures.pNext = &rayTracingFeatures;
-
-    VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES };
-    descriptorIndexingFeatures.runtimeDescriptorArray = VK_TRUE;
-    descriptorIndexingFeatures.descriptorBindingPartiallyBound = VK_TRUE;
-    descriptorIndexingFeatures.pNext = &bufferDeviceAddressFeatures;
-
     VkPhysicalDeviceVulkan12Features vulkan12Features{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
     vulkan12Features.bufferDeviceAddress = VK_TRUE;
     vulkan12Features.descriptorIndexing = VK_TRUE;
-    vulkan12Features.pNext = &descriptorIndexingFeatures;
+    vulkan12Features.runtimeDescriptorArray = VK_TRUE;
+    vulkan12Features.descriptorBindingPartiallyBound = VK_TRUE;
+
+    VkPhysicalDeviceRayTracingPipelineFeaturesKHR rayTracingFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
+    rayTracingFeatures.rayTracingPipeline = VK_TRUE;
+
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR accelerationFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
+    accelerationFeatures.accelerationStructure = VK_TRUE;
+    accelerationFeatures.pNext = nullptr;
+
+    // Chain: Vulkan 1.2 core features -> RT pipeline -> acceleration structure.
+    rayTracingFeatures.pNext = &accelerationFeatures;
+    vulkan12Features.pNext = &rayTracingFeatures;
 
     float queuePriority = 1.0f;
     std::vector<VkDeviceQueueCreateInfo> queueInfos;
@@ -288,7 +286,7 @@ void VulkanContext::createDevice()
     };
 
     std::vector<const char*> layers;
-#ifdef VRAYT_DEBUG
+#if VRAYT_DEBUG
     if (mEnableValidation)
     {
         layers.push_back("VK_LAYER_KHRONOS_validation");
@@ -420,7 +418,7 @@ void VulkanContext::destroy()
         mSurface = VK_NULL_HANDLE;
     }
 
-#ifdef VRAYT_DEBUG
+#if VRAYT_DEBUG
     if (mDebugMessenger)
     {
         DestroyDebugUtilsMessengerEXT(mInstance, mDebugMessenger, nullptr);
