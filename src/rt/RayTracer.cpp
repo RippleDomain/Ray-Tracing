@@ -137,6 +137,8 @@ void RayTracer::create(VulkanContext& vulkanContext, Swapchain& swapchain)
     mWidth = extent.width;
     mHeight = extent.height;
     mResetAccum = true;
+    mAccumInitialized = false;
+    mSwapchainImageInitialized.assign(swapchain.bundle().images.size(), false);
 
     buildScene();
     {
@@ -179,6 +181,8 @@ void RayTracer::resize(VulkanContext& vulkanContext, Swapchain& swapchain)
     mWidth = extent.width;
     mHeight = extent.height;
     mResetAccum = true;
+    mAccumInitialized = false;
+    mSwapchainImageInitialized.assign(swapchain.bundle().images.size(), false);
 
     createAccumulationImage(vulkanContext, extent);
     createDescriptors(vulkanContext, swapchain);
@@ -230,15 +234,19 @@ void RayTracer::destroy(VulkanContext& vulkanContext)
     {
         vmaDestroyBuffer(vulkanContext.allocator(), mSphereBuffer, mSphereAlloc);
     }
-    if (mParamsBuffer && mParamsAlloc)
+    
+    for (size_t i = 0; i < mParamsBuffers.size(); ++i)
     {
-        vmaDestroyBuffer(vulkanContext.allocator(), mParamsBuffer, mParamsAlloc);
+        if (mParamsBuffers[i] && mParamsAllocs[i])
+        {
+            vmaDestroyBuffer(vulkanContext.allocator(), mParamsBuffers[i], mParamsAllocs[i]);
+        }
     }
 
     mSphereBuffer = VK_NULL_HANDLE;
     mSphereAlloc = VK_NULL_HANDLE;
-    mParamsBuffer = VK_NULL_HANDLE;
-    mParamsAlloc = VK_NULL_HANDLE;
+    mParamsBuffers.clear();
+    mParamsAllocs.clear();
 }
 
 void RayTracer::setCamera(const glm::vec3& position, const glm::vec3& direction, float focusDistance)
@@ -348,21 +356,22 @@ void RayTracer::createPipeline(VulkanContext& vulkanContext)
 
 void RayTracer::createDescriptors(VulkanContext& vulkanContext, Swapchain& swapchain)
 {
+    const size_t imageCount = swapchain.bundle().images.size();
     VkDescriptorPoolSize poolSizes[3]{};
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    poolSizes[0].descriptorCount = static_cast<uint32_t>(swapchain.bundle().images.size() * 2);
+    poolSizes[0].descriptorCount = static_cast<uint32_t>(imageCount * 2);
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    poolSizes[1].descriptorCount = static_cast<uint32_t>(swapchain.bundle().images.size());
+    poolSizes[1].descriptorCount = static_cast<uint32_t>(imageCount);
     poolSizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSizes[2].descriptorCount = static_cast<uint32_t>(swapchain.bundle().images.size());
+    poolSizes[2].descriptorCount = static_cast<uint32_t>(imageCount);
 
     VkDescriptorPoolCreateInfo poolInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-    poolInfo.maxSets = static_cast<uint32_t>(swapchain.bundle().images.size());
+    poolInfo.maxSets = static_cast<uint32_t>(imageCount);
     poolInfo.poolSizeCount = 3;
     poolInfo.pPoolSizes = poolSizes;
     VK_CHECK(vkCreateDescriptorPool(vulkanContext.device(), &poolInfo, nullptr, &mDescriptorPool));
 
-    std::vector<VkDescriptorSetLayout> layouts(swapchain.bundle().images.size(), mSetLayout);
+    std::vector<VkDescriptorSetLayout> layouts(imageCount, mSetLayout);
     VkDescriptorSetAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
     allocInfo.descriptorPool = mDescriptorPool;
     allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
@@ -370,8 +379,21 @@ void RayTracer::createDescriptors(VulkanContext& vulkanContext, Swapchain& swapc
     mDescriptorSets.resize(layouts.size());
     VK_CHECK(vkAllocateDescriptorSets(vulkanContext.device(), &allocInfo, mDescriptorSets.data()));
 
+    mParamsBuffers.assign(imageCount, VK_NULL_HANDLE);
+    mParamsAllocs.assign(imageCount, VK_NULL_HANDLE);
+
+    VkBufferCreateInfo bufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    bufferInfo.size = sizeof(GPUParams);
+    bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VmaAllocationCreateInfo paramsAllocInfo{};
+    paramsAllocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
     for (size_t i = 0; i < mDescriptorSets.size(); ++i)
     {
+        VK_CHECK(vmaCreateBuffer(vulkanContext.allocator(), &bufferInfo, &paramsAllocInfo, &mParamsBuffers[i], &mParamsAllocs[i], nullptr));
+
         VkDescriptorImageInfo accumInfo{};
         accumInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
         accumInfo.imageView = mAccumView;
@@ -385,7 +407,7 @@ void RayTracer::createDescriptors(VulkanContext& vulkanContext, Swapchain& swapc
         sphereInfo.range = VK_WHOLE_SIZE;
 
         VkDescriptorBufferInfo paramsInfo{};
-        paramsInfo.buffer = mParamsBuffer;
+        paramsInfo.buffer = mParamsBuffers[i];
         paramsInfo.range = sizeof(GPUParams);
 
         std::array<VkWriteDescriptorSet, 4> writes{};
@@ -472,77 +494,115 @@ void RayTracer::uploadScene(VulkanContext& vulkanContext)
     std::memcpy(mappedMemory, mSpheres.data(), static_cast<size_t>(sphereSize));
     vmaUnmapMemory(vulkanContext.allocator(), mSphereAlloc);
 
-    VkDeviceSize paramsSize = sizeof(GPUParams);
-    bufferInfo.size = paramsSize;
-    bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-
-    VK_CHECK(vmaCreateBuffer(vulkanContext.allocator(), &bufferInfo, &allocInfo, &mParamsBuffer, &mParamsAlloc, nullptr));
 }
 
-void RayTracer::updateParams(VulkanContext& vulkanContext, const VkExtent2D& extent, uint32_t frameIndex)
+void RayTracer::updateParams(VulkanContext& vulkanContext, const VkExtent2D& extent, uint32_t frameIndex, uint32_t swapImageIndex)
 {
     GPUParams params = makeCameraParams(extent);
     params.frameSampleDepthCount = { frameIndex, mSamplesPerPixel, mMaxDepth, static_cast<uint32_t>(mSpheres.size()) };
 
     void* mappedMemory = nullptr;
-    VK_CHECK(vmaMapMemory(vulkanContext.allocator(), mParamsAlloc, &mappedMemory));
+    VK_CHECK(vmaMapMemory(vulkanContext.allocator(), mParamsAllocs[swapImageIndex], &mappedMemory));
     std::memcpy(mappedMemory, &params, sizeof(GPUParams));
-    vmaUnmapMemory(vulkanContext.allocator(), mParamsAlloc);
+    vmaUnmapMemory(vulkanContext.allocator(), mParamsAllocs[swapImageIndex]);
 }
 
 void RayTracer::render(VulkanContext& vulkanContext, Swapchain& swapchain, VkCommandBuffer commandBuffer, uint32_t swapImageIndex, uint32_t frameIndex)
 {
     VkExtent2D extent = swapchain.bundle().extent;
-    updateParams(vulkanContext, extent, frameIndex);
+    updateParams(vulkanContext, extent, frameIndex, swapImageIndex);
 
-    // Image barriers: accumulation to GENERAL, swapchain to GENERAL.
-    std::array<VkImageMemoryBarrier, 2> barriers{};
+    const bool clearAccum = mResetAccum || frameIndex == 0;
 
-    barriers[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barriers[0].oldLayout = mResetAccum ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_GENERAL;
-    barriers[0].newLayout = VK_IMAGE_LAYOUT_GENERAL;
-    barriers[0].srcAccessMask = mResetAccum ? 0 : VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
-    barriers[0].dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
-    barriers[0].image = mAccumImage;
-    barriers[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barriers[0].subresourceRange.levelCount = 1;
-    barriers[0].subresourceRange.layerCount = 1;
-
-    barriers[1].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barriers[1].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    barriers[1].newLayout = VK_IMAGE_LAYOUT_GENERAL;
-    barriers[1].srcAccessMask = 0;
-    barriers[1].dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-    barriers[1].image = swapchain.bundle().images[swapImageIndex];
-    barriers[1].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barriers[1].subresourceRange.levelCount = 1;
-    barriers[1].subresourceRange.layerCount = 1;
-
-    VkPipelineStageFlags sourceStage = mResetAccum ? VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT : VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-
-    vkCmdPipelineBarrier(
-        commandBuffer,
-        sourceStage,
-        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-        0,
-        0,
-        nullptr,
-        0,
-        nullptr,
-        static_cast<uint32_t>(barriers.size()),
-        barriers.data());
-
-    // Clear accumulation on reset.
-    if (mResetAccum || frameIndex == 0)
+    if (clearAccum)
     {
+        VkImageMemoryBarrier accumToClear{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+        accumToClear.oldLayout = mAccumInitialized ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_UNDEFINED;
+        accumToClear.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+        accumToClear.srcAccessMask = mAccumInitialized
+            ? (VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT)
+            : 0;
+        accumToClear.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        accumToClear.image = mAccumImage;
+        accumToClear.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        accumToClear.subresourceRange.levelCount = 1;
+        accumToClear.subresourceRange.layerCount = 1;
+
+        VkPipelineStageFlags accumClearSrcStage = mAccumInitialized
+            ? (VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT)
+            : VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        vkCmdPipelineBarrier(
+            commandBuffer,
+            accumClearSrcStage,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            0,
+            0,
+            nullptr,
+            0,
+            nullptr,
+            1,
+            &accumToClear);
+
         VkClearColorValue zero{};
         VkImageSubresourceRange range{};
         range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         range.levelCount = 1;
         range.layerCount = 1;
         vkCmdClearColorImage(commandBuffer, mAccumImage, VK_IMAGE_LAYOUT_GENERAL, &zero, 1, &range);
+        mAccumInitialized = true;
         mResetAccum = false;
     }
+
+    VkImageMemoryBarrier swapBarrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+    swapBarrier.oldLayout = mSwapchainImageInitialized[swapImageIndex] ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_UNDEFINED;
+    swapBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    swapBarrier.srcAccessMask = 0;
+    swapBarrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    swapBarrier.image = swapchain.bundle().images[swapImageIndex];
+    swapBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    swapBarrier.subresourceRange.levelCount = 1;
+    swapBarrier.subresourceRange.layerCount = 1;
+
+    vkCmdPipelineBarrier(
+        commandBuffer,
+        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        0,
+        0,
+        nullptr,
+        0,
+        nullptr,
+        1,
+        &swapBarrier);
+
+    mSwapchainImageInitialized[swapImageIndex] = true;
+
+    VkImageMemoryBarrier accumToCompute{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+    accumToCompute.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+    accumToCompute.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    accumToCompute.srcAccessMask = clearAccum
+        ? VK_ACCESS_TRANSFER_WRITE_BIT
+        : (VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT);
+    accumToCompute.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+    accumToCompute.image = mAccumImage;
+    accumToCompute.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    accumToCompute.subresourceRange.levelCount = 1;
+    accumToCompute.subresourceRange.layerCount = 1;
+
+    VkPipelineStageFlags accumComputeSrcStage = clearAccum
+        ? VK_PIPELINE_STAGE_TRANSFER_BIT
+        : (VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+    vkCmdPipelineBarrier(
+        commandBuffer,
+        accumComputeSrcStage,
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        0,
+        0,
+        nullptr,
+        0,
+        nullptr,
+        1,
+        &accumToCompute);
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, mPipeline);
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, mPipelineLayout, 0, 1, &mDescriptorSets[swapImageIndex], 0, nullptr);

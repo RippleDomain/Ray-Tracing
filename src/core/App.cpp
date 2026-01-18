@@ -84,6 +84,7 @@ static void imguiInit(Window& window, VulkanContext& vulkanContext, Swapchain& s
     initInfo.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     initInfo.UseDynamicRendering = false;
     initInfo.CheckVkResultFn = nullptr;
+    initInfo.MinAllocationSize = 1024 * 1024;
 
     ImGui_ImplVulkan_Init(&initInfo);
 }
@@ -158,6 +159,15 @@ int App::run()
         std::vector<VkSemaphore> imageRenderFinished;
         std::vector<VkFence> imagesInFlight;
         recreateImageSemaphores(vulkanContext.device(), static_cast<uint32_t>(swapchain.bundle().images.size()), imageRenderFinished, imagesInFlight);
+
+        // Serialize compute work that writes the shared accumulation image.
+        VkSemaphore computeSerial = VK_NULL_HANDLE;
+        {
+            VkSemaphoreCreateInfo semaphoreInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+            VK_CHECK(vkCreateSemaphore(vulkanContext.device(), &semaphoreInfo, nullptr, &computeSerial));
+        }
+
+        bool hasSubmitted = false;
 
         uint32_t currentFrame = 0;
         uint32_t sampleFrame = 0;
@@ -361,7 +371,6 @@ int App::run()
 
             // Wait for GPU.
             VK_CHECK(vkWaitForFences(vulkanContext.device(), 1, &frameSync.inFlight, VK_TRUE, UINT64_MAX));
-            VK_CHECK(vkResetFences(vulkanContext.device(), 1, &frameSync.inFlight));
 
             uint32_t imageIndex = 0;
             VkResult acquireResult = swapchain.acquireNextImage(vulkanContext, frameSync.imageAvailable, &imageIndex);
@@ -385,6 +394,7 @@ int App::run()
             }
 
             imagesInFlight[imageIndex] = frameSync.inFlight;
+            VK_CHECK(vkResetFences(vulkanContext.device(), 1, &frameSync.inFlight));
 
             VK_CHECK(vkResetCommandBuffer(frameSync.cmdBuf, 0));
             VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
@@ -457,17 +467,33 @@ int App::run()
             VK_CHECK(vkEndCommandBuffer(frameSync.cmdBuf));
 
             // Submit.
-            VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+            VkSemaphore waitSemaphores[2]{};
+            VkPipelineStageFlags waitStages[2]{};
+            uint32_t waitCount = 0;
+
+            waitSemaphores[waitCount] = frameSync.imageAvailable;
+            waitStages[waitCount] = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            ++waitCount;
+
+            if (hasSubmitted)
+            {
+                waitSemaphores[waitCount] = computeSerial;
+                waitStages[waitCount] = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+                ++waitCount;
+            }
+
+            VkSemaphore signalSemaphores[2]{ imageRenderFinished[imageIndex], computeSerial };
             VkSubmitInfo submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
-            submitInfo.waitSemaphoreCount = 1;
-            submitInfo.pWaitSemaphores = &frameSync.imageAvailable;
-            submitInfo.pWaitDstStageMask = &waitStage;
+            submitInfo.waitSemaphoreCount = waitCount;
+            submitInfo.pWaitSemaphores = waitSemaphores;
+            submitInfo.pWaitDstStageMask = waitStages;
             submitInfo.commandBufferCount = 1;
             submitInfo.pCommandBuffers = &frameSync.cmdBuf;
-            submitInfo.signalSemaphoreCount = 1;
-            submitInfo.pSignalSemaphores = &imageRenderFinished[imageIndex];
+            submitInfo.signalSemaphoreCount = 2;
+            submitInfo.pSignalSemaphores = signalSemaphores;
 
             VK_CHECK(vkQueueSubmit(vulkanContext.graphicsQueue(), 1, &submitInfo, frameSync.inFlight));
+            hasSubmitted = true;
 
             // Present.
             VkResult presentResult = swapchain.present(vulkanContext, imageRenderFinished[imageIndex], imageIndex);
@@ -503,6 +529,12 @@ int App::run()
 
         vulkanContext.waitIdle();
         imguiShutdown(vulkanContext.device(), imguiPool);
+
+        if (computeSerial)
+        {
+            vkDestroySemaphore(vulkanContext.device(), computeSerial, nullptr);
+        }
+        
         recreateImageSemaphores(vulkanContext.device(), 0, imageRenderFinished, imagesInFlight);
         tracer.destroy(vulkanContext);
         swapchain.destroy(vulkanContext);

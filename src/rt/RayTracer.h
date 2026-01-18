@@ -55,7 +55,7 @@ private:
     void createDescriptors(VulkanContext& vulkanContext, Swapchain& swapchain);
     void createAccumulationImage(VulkanContext& vulkanContext, const VkExtent2D& extent);
     void uploadScene(VulkanContext& vulkanContext);
-    void updateParams(VulkanContext& vulkanContext, const VkExtent2D& extent, uint32_t frameIndex);
+    void updateParams(VulkanContext& vulkanContext, const VkExtent2D& extent, uint32_t frameIndex, uint32_t swapImageIndex);
     GPUParams makeCameraParams(const VkExtent2D& extent) const;
 
     VkDescriptorSetLayout mSetLayout = VK_NULL_HANDLE;
@@ -71,12 +71,14 @@ private:
     VkBuffer mSphereBuffer = VK_NULL_HANDLE;
     VmaAllocation mSphereAlloc = VK_NULL_HANDLE;
 
-    VkBuffer mParamsBuffer = VK_NULL_HANDLE;
-    VmaAllocation mParamsAlloc = VK_NULL_HANDLE;
+    std::vector<VkBuffer> mParamsBuffers;
+    std::vector<VmaAllocation> mParamsAllocs;
 
     uint32_t mWidth = 0;
     uint32_t mHeight = 0;
     bool mResetAccum = true;
+    bool mAccumInitialized = false;
+    std::vector<bool> mSwapchainImageInitialized;
 
     std::vector<GPUSphere> mSpheres;
 
