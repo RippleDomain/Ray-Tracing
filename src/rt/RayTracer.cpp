@@ -37,6 +37,7 @@ namespace
         shaderc::Compiler compiler;
         shaderc::CompileOptions options;
         options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_3);
+        options.SetOptimizationLevel(shaderc_optimization_level_performance);
 
         auto result = compiler.CompileGlslToSpv(source, shaderc_compute_shader, path.c_str(), options);
 
@@ -127,6 +128,7 @@ GPUParams RayTracer::makeCameraParams(const VkExtent2D& extent) const
     params.v = { v, 0.0f };
     params.w = { w, 0.0f };
     params.resolution = { static_cast<float>(extent.width), static_cast<float>(extent.height), 0.0f, 0.0f };
+    params.invResolution = { 1.0f / static_cast<float>(extent.width), 1.0f / static_cast<float>(extent.height), 0.0f, 0.0f };
 
     return params;
 }
@@ -247,6 +249,7 @@ void RayTracer::destroy(VulkanContext& vulkanContext)
     mSphereAlloc = VK_NULL_HANDLE;
     mParamsBuffers.clear();
     mParamsAllocs.clear();
+    mParamsMapped.clear();
 }
 
 void RayTracer::setCamera(const glm::vec3& position, const glm::vec3& direction, float focusDistance)
@@ -389,10 +392,15 @@ void RayTracer::createDescriptors(VulkanContext& vulkanContext, Swapchain& swapc
 
     VmaAllocationCreateInfo paramsAllocInfo{};
     paramsAllocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+    paramsAllocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+
+    mParamsMapped.assign(imageCount, nullptr);
 
     for (size_t i = 0; i < mDescriptorSets.size(); ++i)
     {
-        VK_CHECK(vmaCreateBuffer(vulkanContext.allocator(), &bufferInfo, &paramsAllocInfo, &mParamsBuffers[i], &mParamsAllocs[i], nullptr));
+        VmaAllocationInfo allocationInfo{};
+        VK_CHECK(vmaCreateBuffer(vulkanContext.allocator(), &bufferInfo, &paramsAllocInfo, &mParamsBuffers[i], &mParamsAllocs[i], &allocationInfo));
+        mParamsMapped[i] = allocationInfo.pMappedData;
 
         VkDescriptorImageInfo accumInfo{};
         accumInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -501,10 +509,8 @@ void RayTracer::updateParams(VulkanContext& vulkanContext, const VkExtent2D& ext
     GPUParams params = makeCameraParams(extent);
     params.frameSampleDepthCount = { frameIndex, mSamplesPerPixel, mMaxDepth, static_cast<uint32_t>(mSpheres.size()) };
 
-    void* mappedMemory = nullptr;
-    VK_CHECK(vmaMapMemory(vulkanContext.allocator(), mParamsAllocs[swapImageIndex], &mappedMemory));
-    std::memcpy(mappedMemory, &params, sizeof(GPUParams));
-    vmaUnmapMemory(vulkanContext.allocator(), mParamsAllocs[swapImageIndex]);
+    std::memcpy(mParamsMapped[swapImageIndex], &params, sizeof(GPUParams));
+    vmaFlushAllocation(vulkanContext.allocator(), mParamsAllocs[swapImageIndex], 0, sizeof(GPUParams));
 }
 
 void RayTracer::render(VulkanContext& vulkanContext, Swapchain& swapchain, VkCommandBuffer commandBuffer, uint32_t swapImageIndex, uint32_t frameIndex)

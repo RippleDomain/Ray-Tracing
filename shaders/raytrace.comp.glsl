@@ -27,6 +27,7 @@ layout(std140, binding = 3) uniform Params
     vec4 w;
     uvec4 frameSampleDepthCount; // x = frame, y = samples per frame, z = max depth, w = sphere count
     vec4 resolution; // x = width, y = height
+    vec4 invResolution; // x = 1 / width, y = 1 / height
 } params;
 
 layout(binding = 0, rgba32f) uniform image2D accumImage;
@@ -313,10 +314,10 @@ void main()
 
     for (uint sampleIndex = 0u; sampleIndex < spp; ++sampleIndex)
     {
-        float uCoord = (float(pixel.x) + rand(rng)) / params.resolution.x;
+        float uCoord = (float(pixel.x) + rand(rng)) * params.invResolution.x;
 
         // Flip Y so image is upright (swapchain origin top-left, camera expects bottom-left).
-        float vCoord = (float(params.resolution.y - 1u - pixel.y) + rand(rng)) / params.resolution.y;
+        float vCoord = (float(params.resolution.y - 1u - pixel.y) + rand(rng)) * params.invResolution.y;
 
         vec3 randomDisk = params.originLens.w * randomInUnitDisk(rng);
         vec3 offset = params.u.xyz * randomDisk.x + params.v.xyz * randomDisk.y;

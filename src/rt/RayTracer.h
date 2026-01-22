@@ -13,7 +13,7 @@ struct GPUSphere
 {
     glm::vec4 centerRadius; // xyz = center, w = radius.
     glm::vec4 albedo; // xyz = albedo, w unused.
-    glm::vec4 misc; // x = material (0=lambert,1=metal,2=dielectric), y = fuzz, z = refIdx, w = flags (bit0=checker).
+    glm::vec4 misc; // x = material (0 = lambert, 1 = metal, 2 = dielectric), y = fuzz, z = refIdx, w = flags (bit0=checker).
 };
 
 // Uniform parameters.
@@ -27,7 +27,8 @@ struct GPUParams
     glm::vec4 v;
     glm::vec4 w;
     glm::uvec4 frameSampleDepthCount; // frameIndex, samplesPerFrame, maxDepth, sphereCount.
-    glm::vec4 resolution; // x=width, y=height.
+    glm::vec4 resolution; // x = width, y = height.
+    glm::vec4 invResolution; // x = 1 / width, y = 1 / height.
 };
 
 class RayTracer
@@ -73,6 +74,7 @@ private:
 
     std::vector<VkBuffer> mParamsBuffers;
     std::vector<VmaAllocation> mParamsAllocs;
+    std::vector<void*> mParamsMapped;
 
     uint32_t mWidth = 0;
     uint32_t mHeight = 0;
