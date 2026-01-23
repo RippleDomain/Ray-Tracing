@@ -30,8 +30,50 @@ namespace
         return std::string((std::istreambuf_iterator<char>(inputStream)), std::istreambuf_iterator<char>());
     }
 
+    std::vector<uint32_t> readFileBinaryWords(const std::string& path)
+    {
+        std::ifstream inputStream(path, std::ios::binary | std::ios::ate);
+
+        if (!inputStream)
+        {
+            throw std::runtime_error("Failed to open file: " + path);
+        }
+
+        const std::streamsize size = inputStream.tellg();
+        if (size <= 0 || (size % 4) != 0)
+        {
+            throw std::runtime_error("Invalid SPIR-V file size: " + path);
+        }
+
+        std::vector<uint32_t> data(static_cast<size_t>(size) / 4);
+        inputStream.seekg(0);
+        inputStream.read(reinterpret_cast<char*>(data.data()), size);
+
+        if (!inputStream)
+        {
+            throw std::runtime_error("Failed to read file: " + path);
+        }
+
+        return data;
+    }
+
     VkShaderModule compileCompute(VkDevice device, const std::string& path)
     {
+        std::vector<uint32_t> spirv;
+
+#if defined(_DEBUG)
+        std::string spvPath = path;
+        if (spvPath.size() > 5 && spvPath.substr(spvPath.size() - 5) == ".glsl")
+        {
+            spvPath = spvPath.substr(0, spvPath.size() - 5) + ".spv";
+        }
+        else
+        {
+            spvPath += ".spv";
+        }
+
+        spirv = readFileBinaryWords(spvPath);
+#else
         auto source = readFileText(path);
 
         shaderc::Compiler compiler;
@@ -46,7 +88,8 @@ namespace
             throw std::runtime_error(result.GetErrorMessage());
         }
 
-        std::vector<uint32_t> spirv(result.cbegin(), result.cend());
+        spirv.assign(result.cbegin(), result.cend());
+#endif
 
         VkShaderModuleCreateInfo createInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
         createInfo.codeSize = spirv.size() * sizeof(uint32_t);

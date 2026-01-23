@@ -94,12 +94,17 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)external\glfw\include;$(SolutionDir)external\vulkan\Include;$(SolutionDir)external\imgui\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
+    <PreBuildEvent>
+      <Command>if not defined VULKAN_SDK (echo VULKAN_SDK is not set. Install the Vulkan SDK or set VULKAN_SDK to precompile shaders. &amp; exit /b 1)
+"%VULKAN_SDK%\Bin\glslangValidator.exe" -V -o "$(ProjectDir)shaders\raytrace.comp.spv" "$(ProjectDir)shaders\raytrace.comp.glsl"</Command>
+    </PreBuildEvent>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)external\glfw\lib-vc2022;$(SolutionDir)external\vulkan\Lib;$(SolutionDir)external\imgui\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>shaderc_combined.lib;glfw3.lib;vulkan-1.lib;imgui.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;imgui.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -128,12 +133,17 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)external\glfw\include;$(SolutionDir)external\vulkan\Include;$(SolutionDir)external\imgui\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
+    <PreBuildEvent>
+      <Command>if not defined VULKAN_SDK (echo VULKAN_SDK is not set. Install the Vulkan SDK or set VULKAN_SDK to precompile shaders. &amp; exit /b 1)
+"%VULKAN_SDK%\Bin\glslangValidator.exe" -V -o "$(ProjectDir)shaders\raytrace.comp.spv" "$(ProjectDir)shaders\raytrace.comp.glsl"</Command>
+    </PreBuildEvent>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)external\glfw\lib-vc2022;$(SolutionDir)external\vulkan\Lib;$(SolutionDir)external\imgui\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>shaderc_combined.lib;glfw3.lib;vulkan-1.lib;imgui.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;imgui.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

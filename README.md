@@ -2,6 +2,8 @@
 
 A C++/Vulkan compute ray tracer that renders a sphere scene in real time, accumulates multi-sample frames, and exposes camera, depth-of-field, and ray tracing controls through ImGui.
 
+This project is the **compute shader** implementation of Vulkan ray tracing. The **Vulkan Ray Tracing Pipeline** version lives in a separate repo: **https://github.com/RippleDomain/Ray-Tracing-2.0**.
+
 ## Images
 **Ray Traced Spheres with Depth of Field**
 
