@@ -13,7 +13,7 @@ struct GPUSphere
 {
     glm::vec4 centerRadius; // xyz = center, w = radius.
     glm::vec4 albedo; // xyz = albedo, w unused.
-    glm::vec4 misc; // x = material (0 = lambert, 1 = metal, 2 = dielectric), y = fuzz, z = refIdx, w = flags (bit0=checker).
+    glm::vec4 misc; // x = material (0 = lambert, 1 = metal, 2 = dielectric), y = fuzz, z = refIdx, w = flags (bit0 = checker).
 };
 
 // Uniform parameters.
